@@ -1,0 +1,8 @@
+#include "nsISupports.idl"
+
+[scriptable, uuid(30b3c4b3-f648-4f69-9189-6af0dd8b3e61)]
+interface nsIEveMarketDataProviderService : nsISupports {
+    readonly attribute string name;
+    float getPriceForItem(in long typeID, in nsISupports params);
+};
+
