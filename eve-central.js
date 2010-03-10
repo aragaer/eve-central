@@ -19,9 +19,7 @@ evecentral.prototype = {
     }],
 
     get name()          "EVE Central",
-    getPriceForItem:    function (typeID, params) {
-        if (!params)
-            params = {req: "//all/median"};
+    _prepareData:       function (typeID, params) {
         var data = ['typeid='+typeID].concat([i+'='+params[i] for (i in ['hours', 'minQ']) if (params[i])]);
         switch (typeof params.regionlimit) {
         case 'string':
@@ -34,19 +32,10 @@ evecentral.prototype = {
         default:
             break;
         }
-        var req = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"].
-                createInstance(Ci.nsIXMLHttpRequest);
-        req.open('POST', 'http://api.eve-central.com/api/marketstat', false);
-        req.setRequestHeader('Content-Type','application/x-www-form-urlencoded');
-        try {
-            var t = Cc["@mozilla.org/timer;1"].createInstance(Ci.nsITimer);
-            t.initWithCallback(req.abort, 5000, t.TYPE_ONE_SHOT);
-            req.send(data.join('&'));
-            t.cancel();
-        } catch (e) {
-            dump("Requesting data from eve central: "+e+"\n");
-            req = {status: 0};
-        }
+        return data.join('&');
+    },
+    _processResult:     function (req, params) {
+        var field = params.req || "//all/median";
         if (req.status != 200) {
             dump('Failed to connect to server!\n');
             gOS.notifyObservers(null, 'eve-market-error', 'Failed to connect to server '+req.status);
@@ -57,14 +46,47 @@ evecentral.prototype = {
         var nsResolver = xpe.createNSResolver(req.responseXML.documentElement);
         var result;
         try {
-            result = xpe.evaluate(params.req+"/text()", req.responseXML, nsResolver, 0, null);
+            result = xpe.evaluate(field+"/text()", req.responseXML, nsResolver, 0, null);
         } catch (e) {
-            dump("error running xpe with expression '"+params.req+"/text()'\n");
+            dump("error running xpe with expression '"+field+"/text()'\n");
             return 0;
         }
 
         var res = result.iterateNext();
         return res ? res.data : 0;
+    },
+    _makeReq:           function ()
+        Cc["@mozilla.org/xmlextras/xmlhttprequest;1"].createInstance(Ci.nsIXMLHttpRequest),
+
+    getPriceForItemAsync:   function (typeID, params, handler) {
+        var data = this._prepareData(typeID, params);
+        var req = this._makeReq();
+        var process = this._processResult;
+        req.open('POST', 'http://api.eve-central.com/api/marketstat', true);
+        req.setRequestHeader('Content-Type','application/x-www-form-urlencoded');
+        req.onreadystatechange = function (aEvt) {
+            if (req.readyState != 4)
+                return;
+            handler(process(req, params));
+        };
+        req.send(data);
+        return true;
+    },
+    getPriceForItem:    function (typeID, params) {
+        var data = this._prepareData(typeID, params);
+        var req = this._makeReq();
+        req.open('POST', 'http://api.eve-central.com/api/marketstat', false);
+        req.setRequestHeader('Content-Type','application/x-www-form-urlencoded');
+        try {
+            var t = Cc["@mozilla.org/timer;1"].createInstance(Ci.nsITimer);
+            t.initWithCallback(req.abort, 5000, t.TYPE_ONE_SHOT);
+            req.send(data);
+            t.cancel();
+        } catch (e) {
+            dump("Requesting data from eve central: "+e+"\n");
+            req = {status: 0};
+        }
+        return this._processResult(req, params);
     },
 };
 

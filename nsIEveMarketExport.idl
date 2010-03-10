@@ -1,8 +1,15 @@
 #include "nsISupports.idl"
 
+[scriptable, function, uuid(a3fc75a0-7e82-4fb3-879b-a090f22d0dca)]
+interface nsEveMarketDataHandler : nsISupports {
+    void onData(in float price);
+};
+
 [scriptable, uuid(30b3c4b3-f648-4f69-9189-6af0dd8b3e61)]
 interface nsIEveMarketDataProviderService : nsISupports {
     readonly attribute string name;
     float getPriceForItem(in long typeID, in nsISupports params);
+    boolean getPriceForItemAsync(in long typeID, in nsISupports params,
+            in nsEveMarketDataHandler handler);
 };
 
