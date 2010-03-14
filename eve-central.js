@@ -65,9 +65,8 @@ evecentral.prototype = {
         req.open('POST', 'http://api.eve-central.com/api/marketstat', true);
         req.setRequestHeader('Content-Type','application/x-www-form-urlencoded');
         req.onreadystatechange = function (aEvt) {
-            if (req.readyState != 4)
-                return;
-            handler(process(req, params));
+            if (req.readyState == 4)
+                handler.onData(process(req, params));
         };
         req.send(data);
         return true;
