@@ -101,7 +101,6 @@ function getPriceFromDB(typeID) {
     let stm = Stm.getPrice;
     stm.params.tid = typeID;
     try {
-        stm.execute();
         if (stm.step())
             return stm.row.price;
     } catch (e) {
@@ -129,6 +128,7 @@ function processResult(req, params, typeID) {
     if (req.status != 200) {
         dump('Failed to connect to server!\n');
         gOS.notifyObservers(null, 'eve-market-error', 'Failed to connect to server '+req.status);
+        return -1;
     }
 
     var xpe = Cc["@mozilla.org/dom/xpath-evaluator;1"].
@@ -139,7 +139,7 @@ function processResult(req, params, typeID) {
         result = xpe.evaluate(field+"/text()", req.responseXML, nsResolver, 0, null);
     } catch (e) {
         dump("error running xpe with expression '"+field+"/text()'\n");
-        return 0;
+        return -1;
     }
 
     var res = result.iterateNext();
@@ -147,7 +147,7 @@ function processResult(req, params, typeID) {
         writePriceToDB(typeID, res.data)
         return res.data;
     } else
-        return 0;
+        return -1;
 }
 
 function prepareData(typeID, params) {
@@ -165,3 +165,4 @@ function prepareData(typeID, params) {
     }
     return data.join('&');
 }
+
