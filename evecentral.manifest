@@ -1,0 +1,5 @@
+interfaces nsIEveMarketExport.xpt
+
+component {c618fc80-7515-4f84-bd85-3d351978a4dc} eve-central.js
+contract @aragaer/eve/market-data/provider;1?name=eve-central {c618fc80-7515-4f84-bd85-3d351978a4dc}
+category eve-db-init evecentral @aragaer/eve/market-data/provider;1?name=eve-central

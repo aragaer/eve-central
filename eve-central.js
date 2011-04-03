@@ -2,8 +2,8 @@ const Cc = Components.classes;
 const Ci = Components.interfaces;
 
 Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
+Components.utils.import("resource://gre/modules/Services.jsm");
 
-var gOS;
 const Query = {
     getPrice: "select price from simple_prices where typeID=:tid " +
             "and date('now') < date(exp_date);",
@@ -11,8 +11,18 @@ const Query = {
             "date('now', '+7 days'));",
 };
 const Stm = {};
+var gEC;
 function evecentral() {
-    gOS = Cc["@mozilla.org/observer-service;1"].getService(Ci.nsIObserverService);
+    if (gEC)
+        return;
+    gEC = this;
+    var db = Cc["@aragaer/eve/db;1"].getService(Ci.nsIEveDBService);
+    try {
+        if (gEC._conn = db.getConnection()) // assignment!
+            init();
+    } catch (e) {
+        Services.obs.addObserver(this, 'eve-db-init', false);
+    }
 }
 
 evecentral.prototype = {
@@ -21,10 +31,6 @@ evecentral.prototype = {
     contractID:         "@aragaer/eve/market-data/provider;1?name=eve-central",
     QueryInterface:     XPCOMUtils.generateQI([Ci.nsIEveMarketDataProviderService,
             Ci.nsIObserver]),
-    _xpcom_categories:  [{
-        category: "app-startup",
-        service: true
-    }],
 
     get name()          "EVE Central",
 
@@ -69,31 +75,33 @@ evecentral.prototype = {
     observe:        function (aSubject, aTopic, aData) {
         dump('Got '+aTopic+' event in eve central\n');
         switch (aTopic) {
-        case 'app-startup':
-            gOS.addObserver(this, 'eve-db-init', false);
-            break;
         case 'eve-db-init':
-            var db = Cc["@aragaer/eve/db;1"].getService(Ci.nsIEveDBService);
-            dump("DB service is initialized in eve-central... store connection now\n");
-            this._conn = db.getConnection();
-            if (!this._conn.tableExists('simple_prices'))
-                this._conn.createTable('simple_prices',
-                        'typeID integer, price float, exp_date char, primary key (typeID)');
-            for (i in Query)
-                try {
-                    Stm[i] = this._conn.createStatement(Query[i]);
-                } catch (e) {
-                    dump(this._conn.lastErrorString+"\n");
-                }
+            gEC._conn = aSubject.QueryInterface(Ci.mozIStorageConnection);
+            init();
             break;
         }
     },
 };
 
 var components = [evecentral];
-function NSGetModule(compMgr, fileSpec) {
-    return XPCOMUtils.generateModule(components);
+if (XPCOMUtils.generateNSGetFactory)
+    var NSGetFactory = XPCOMUtils.generateNSGetFactory(components);
+else
+    var NSGetModule = XPCOMUtils.generateNSGetModule(components);
+
+function init() {
+    if (!gEC._conn.tableExists('simple_prices'))
+        gEC._conn.createTable('simple_prices',
+                'typeID integer, price float, exp_date char, primary key (typeID)');
+    for (var i in Query)
+        try {
+            Stm[i] = gEC._conn.createStatement(Query[i]);
+        } catch (e) {
+            dump(gEC._conn.lastErrorString+"\n");
+        }
+    dump("Eve central init done\n");
 }
+
 function makeReq()
     Cc["@mozilla.org/xmlextras/xmlhttprequest;1"].createInstance(Ci.nsIXMLHttpRequest);
 
@@ -127,7 +135,7 @@ function processResult(req, params, typeID) {
     var field = params.req || "//all/median";
     if (req.status != 200) {
         dump('Failed to connect to server!\n');
-        gOS.notifyObservers(null, 'eve-market-error', 'Failed to connect to server '+req.status);
+        Services.obs.notifyObservers(null, 'eve-market-error', 'Failed to connect to server '+req.status);
         return -1;
     }
 
