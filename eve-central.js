@@ -51,6 +51,9 @@ evecentral.prototype = {
         req.send(data);
         return true;
     },
+    getPriceForItemAsync2:  function (typeID, params, handler) {
+        return false;
+    },
     getPriceForItem:    function (typeID, params) {
         var price = getPriceFromDB(typeID);
         if (price != -1) {
@@ -71,6 +74,9 @@ evecentral.prototype = {
             req = {status: 0};
         }
         return processResult(req, params, typeID);
+    },
+    getPriceForItem2:   function (typeID, params) {
+        return { wrappedJSObject: null };
     },
     observe:        function (aSubject, aTopic, aData) {
         dump('Got '+aTopic+' event in eve central\n');
@@ -158,8 +164,9 @@ function processResult(req, params, typeID) {
         return -1;
 }
 
+const stringparams = 'hours minQ usesystem'.split(' ');
 function prepareData(typeID, params) {
-    var data = ['typeid='+typeID].concat([i+'='+params[i] for (i in ['hours', 'minQ']) if (params[i])]);
+    var data = ['typeid='+typeID].concat([i+'='+params[i] for (i in stringparams) if (params[i])]);
     switch (typeof params.regionlimit) {
     case 'string':
     case 'number':

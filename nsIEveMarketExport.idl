@@ -5,11 +5,21 @@ interface nsEveMarketDataHandler : nsISupports {
     void onData(in float price);
 };
 
+[scriptable, function, uuid(d020ad0d-ae3c-41c1-84de-28cd87855e82)]
+interface nsEveMarketDataHandler2 : nsISupports {
+    void onData(in nsISupports data);
+};
+
 [scriptable, uuid(30b3c4b3-f648-4f69-9189-6af0dd8b3e61)]
 interface nsIEveMarketDataProviderService : nsISupports {
     readonly attribute string name;
     float getPriceForItem(in long typeID, in nsISupports params);
     boolean getPriceForItemAsync(in long typeID, in nsISupports params,
             in nsEveMarketDataHandler handler);
+    void getPriceForItem2(in long typeID, in nsISupports params,
+            [retval] out nsISupports retv);
+    boolean getPriceForItemAsync2(in long typeID, in nsISupports params,
+            in nsEveMarketDataHandler2 handler);
+
 };
 
