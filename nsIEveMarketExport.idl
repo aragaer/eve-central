@@ -18,7 +18,7 @@ interface nsIEveMarketDataProviderService : nsISupports {
             in nsEveMarketDataHandler handler);
     void getPriceForItem2(in long typeID, in nsISupports params,
             [retval] out nsISupports retv);
-    boolean getPriceForItemAsync2(in long typeID, in nsISupports params,
+    void getPriceForItemAsync2(in long typeID, in nsISupports params,
             in nsEveMarketDataHandler2 handler);
 
 };
