@@ -56,7 +56,16 @@ evecentral.prototype = {
     },
     getPriceForItemAsync2:  function (typeID, params, handler) {
         var data = prepareData(typeID, params);
-        return false;
+        var hash = makeHash(data);
+        var price_data = getPriceFromDB(typeID, hash);
+        if (price_data)
+            return handler.onData({wrappedJSObject: JSON.parse(price_data)});
+        var req = makeReq(true);
+        req.onreadystatechange = function (aEvt) {
+            if (req.readyState == 4)
+                handler.onData({wrappedJSObject: processResult2(req, typeID, hash)});
+        };
+        req.send(data);
     },
     getPriceForItem:    function (typeID, params) {
         var price = getPriceSimpleFromDB(typeID);
@@ -178,7 +187,6 @@ function writePriceToDB(typeID, price) {
     }
 }
 
-
 function writePriceToDB2(typeID, data, hash) {
     let stm = Stm.setPrice;
     try {
@@ -196,11 +204,10 @@ function writePriceToDB2(typeID, data, hash) {
 function processResult2(req, typeID, hash) {
     var res, xpe_res;
     var result = {buy: {}, sell: {}, all: {}};
-    dump(req+"\n");
     if (req.status != 200) {
         dump('Failed to connect to server!\n');
         Services.obs.notifyObservers(null, 'eve-market-error', 'Failed to connect to server '+req.status);
-        return -1;
+        return null;
     }
 
     var xpe = Cc["@mozilla.org/dom/xpath-evaluator;1"].
