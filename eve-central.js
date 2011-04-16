@@ -28,7 +28,40 @@ function evecentral() {
     } catch (e) {
         Services.obs.addObserver(this, 'eve-db-init', false);
     }
+    Services.obs.addObserver(this, 'eve-market-init', false);
 }
+
+var _accepts = [
+    {
+        name:       "regionlimit",
+        required:   false,
+        several:    true,
+        desc:       "List of regions to which the search should be limited",
+        type:       "integer",
+    },
+    {
+        name:       "usesystem",
+        required:   false,
+        several:    false,
+        desc:       "Restrict statistics to a single system",
+        type:       "integer",
+    },
+];
+
+var _provides = [
+    {
+        name:       'sell/min',
+        desc:       "The lowest of sell prices",
+    },
+    {
+        name:       'buy/max',
+        desc:       "The highest of buy prices",
+    },
+    {
+        name:       'all/median',
+        desc:       "Median price",
+    },
+];
 
 evecentral.prototype = {
     classDescription:   "EVE Central price provider",
@@ -38,6 +71,16 @@ evecentral.prototype = {
             Ci.nsIObserver]),
 
     get name()          "EVE Central",
+    get accepts()       {
+        var arr = Cc["@mozilla.org/array;1"].createInstance(Ci.nsIMutableArray);
+        [arr.appendElement({wrappedJSObject: el}, false) for each (el in _accepts)];
+        return arr.QueryInterface(Ci.nsIArray);
+    },
+    get provides()      {
+        var arr = Cc["@mozilla.org/array;1"].createInstance(Ci.nsIMutableArray);
+        [arr.appendElement({wrappedJSObject: el}, false) for each (el in _provides)];
+        return arr.QueryInterface(Ci.nsIArray);
+    },
 
     getPriceForItemAsync:   function (typeID, params, handler) {
         var price = getPriceSimpleFromDB(typeID);
@@ -110,6 +153,9 @@ evecentral.prototype = {
         case 'eve-db-init':
             gEC._conn = aSubject.QueryInterface(Ci.mozIStorageConnection);
             init();
+            break;
+        case 'eve-market-init':
+            Services.obs.notifyObservers(null, 'eve-market-provider-init', 'eve-central');
             break;
         }
     },
