@@ -303,7 +303,9 @@ function processResult(req, params, typeID) {
 
 const stringparams = 'hours minQ usesystem'.split(' ');
 function prepareData(typeID, params) {
-    var data = ['typeid='+typeID].concat([i+'='+params[i] for (i in stringparams) if (params[i])]);
+    if (params.wrappedJSObject)
+        params = params.wrappedJSObject;
+    var data = ['typeid='+typeID].concat([i+'='+params[i] for each (i in stringparams) if (params[i])]);
     switch (typeof params.regionlimit) {
     case 'string':
     case 'number':
